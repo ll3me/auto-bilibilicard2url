@@ -17,6 +17,13 @@ function removeUrlParams(url) {
   }
 }
 
+function waitRandom(min, max) {
+  const delay = Math.random() * (max - min) + min;
+  return new Promise(resolve => {
+    setTimeout(resolve, delay);
+  });
+}
+
 function connectToNapCat() {
   console.log('正在尝试连接到 NapCat WebSocket 服务...');
 
@@ -66,9 +73,11 @@ function connectToNapCat() {
                 message: '对应的视频链接是： ' + shortUrl, // 直接回复短链接
               },
             };
-    
-            ws.send(JSON.stringify(reply));
-            console.log('🚀 回复已发送！');
+            waitRandom(1000, 1500).then(() => {
+              ws.send(JSON.stringify(reply));
+              console.log('🚀 回复已发送！');
+            });
+            
         }
       }
     } catch (error) {
