@@ -1,22 +1,23 @@
-// index.js (仅提取 b23.tv 链接的最终版)
+// index.js (支持可配置的BV模式)
 
 const WebSocket = require('ws');
+const axios = require('axios'); // 引入 axios
 const config = require('./config');
 
 let ws;
 const reconnectInterval = 5000;
 
+// 清理URL参数的函数，保持不变
 function removeUrlParams(url) {
   try {
     const urlObj = new URL(url);
-    // 返回 protocol + host + pathname
     return `${urlObj.origin}${urlObj.pathname}`;
   } catch (error) {
-    // 如果 URL 解析失败，尝试简单处理
     return url.split('?')[0].split('#')[0];
   }
 }
 
+// 随机延迟函数，保持不变
 function waitRandom(min, max) {
   const delay = Math.random() * (max - min) + min;
   return new Promise(resolve => {
@@ -38,50 +39,77 @@ function connectToNapCat() {
     console.log('✅ 成功连接到 NapCat WebSocket 服务！');
   });
 
-  ws.on('message', (data) => {
+  // 将消息处理函数标记为 async 以便使用 await
+  ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString());
 
-      // 过滤非指定群聊的消息
       if (message.post_type !== 'message' || message.message_type !== 'group' || !config.enabledGroups.includes(message.group_id.toString())) {
         return;
       }
 
-      // 寻找 JSON 类型的消息段
       const jsonMessageSegment = message.message.find(segment => segment.type === 'json');
       if (!jsonMessageSegment) {
         return;
       }
 
       const jsonData = JSON.parse(jsonMessageSegment.data.data);
-      
-      // 使用 appid 作为唯一的、最可靠的判断依据
       const isBiliApp = jsonData.meta?.detail_1?.appid === '1109937557';
 
       if (isBiliApp) {
-        // 直接从 JSON 数据中提取 b23.tv 短链接
-        const shortUrl = removeUrlParams(jsonData.meta.detail_1.qqdocurl);
+        const rawUrl = jsonData.meta.detail_1.qqdocurl;
+        if (!rawUrl) return;
 
-        if (shortUrl) {
-            console.log(`[群: ${message.group_id}] 检测到B站小程序, 提取到短链接: ${shortUrl}`);
+        const shortUrl = removeUrlParams(rawUrl);
+        console.log(`[群: ${message.group_id}] 检测到B站小程序, 提取到短链接: ${shortUrl}`);
 
-            // 构建回复消息
-            const reply = {
-              action: 'send_group_msg',
-              params: {
-                group_id: message.group_id,
-                message: '对应的视频链接是： ' + shortUrl, // 直接回复短链接
+        let finalMessage = config.bilibili.replyPrefix + '\n' + shortUrl;
+
+        // [核心功能] 检查BV模式是否开启
+        if (config.bilibili.enableBVMode) {
+          try {
+            console.log(`BV模式已开启, 正在解析: ${shortUrl}`);
+            // 访问短链接获取重定向后的最终URL
+            const response = await axios.get(shortUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
               },
-            };
-            waitRandom(1000, 1500).then(() => {
-              ws.send(JSON.stringify(reply));
-              console.log('🚀 回复已发送！');
+              timeout: 5000 // 5秒超时
             });
-            
+
+            const finalUrl = response.request.res.responseUrl;
+            // 使用正则表达式从最终URL中提取BV号
+            const bvMatch = finalUrl.match(/\/video\/(BV[a-zA-Z0-9]+)/);
+
+            if (bvMatch && bvMatch[1]) {
+              const bvId = bvMatch[1];
+              console.log(`✅ BV号提取成功: ${bvId}`);
+              const appendText = config.bilibili.bvAppendFormat.replace('{bv}', bvId);
+              finalMessage += appendText;
+            } else {
+              console.warn(`⚠️ 未能在最终URL中找到BV号: ${finalUrl}`);
+            }
+          } catch (error) {
+            console.error(`❌ 解析BV号时发生错误: ${error.message}`);
+            // 如果解析失败，finalMessage 保持原样，机器人仍然会回复短链接
+          }
         }
+
+        // 构建回复消息
+        const reply = {
+          action: 'send_group_msg',
+          params: {
+            group_id: message.group_id,
+            message: finalMessage,
+          },
+        };
+
+        // 等待随机延迟后发送
+        await waitRandom(1000, 1500);
+        ws.send(JSON.stringify(reply));
+        console.log(`🚀 回复已发送: ${finalMessage}`);
       }
     } catch (error) {
-      // 仅在解析JSON等核心流程出错时打印日志，忽略无关错误
       console.error('处理消息时发生错误:', error);
     }
   });
@@ -99,4 +127,4 @@ function connectToNapCat() {
 
 // 启动连接
 connectToNapCat();
-console.log('Bilibili 短链接提取服务已启动，正在等待消息...');
+console.log('Bilibili 短链接提取服务已启动 (支持BV模式)，正在等待消息...');

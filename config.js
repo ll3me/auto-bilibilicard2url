@@ -1,18 +1,28 @@
 // config.js
 
 module.exports = {
-  // napcat WebSocket 服务地址
-  // 如果 napcat 和此服务在同一台机器上，通常使用 localhost
-  // 端口号请根据你的 napcat 配置进行修改
+  // NapCat WebSocket 服务配置
   napcat: {
-    url: 'ws://127.0.0.1:3001/ws', // 例如: 'ws://127.0.0.1:3001/ws'
-    accessToken: '',           // 如果 napcat 配置了访问令牌，请填写在此处
+    url: 'ws://localhost:3001/ws', // 例如: 'ws://127.0.0.1:3001/ws'
+    accessToken: '',           // 如果 napcat 配置了访问令牌，请填写
   },
 
   // 需要开启此功能的群聊 GroupID 列表
-  // 请将您的目标群号填入此数组
-  // 例如: ['12345678', '87654321']
   enabledGroups: [
-    '12345678', // 替换为你的目标群号
+    '123456789', // 替换为你的目标群号
   ],
+
+  // Bilibili 相关功能配置
+  bilibili: {
+    // 是否开启BV模式。
+    // true: 会访问短链接获取BV号，并附加到回复末尾。示例: "...b23.tv/xxxxx [BV: BV1xx4xx1xx]"
+    // false: 仅回复清理后的 b23.tv 短链接。
+    enableBVMode: true,
+
+    // 回复消息的前缀
+    replyPrefix: '链接： ',
+
+    // BV号附加格式, {bv} 会被替换为实际的BV号
+    bvAppendFormat: ' [BV: {bv}]'
+  }
 };

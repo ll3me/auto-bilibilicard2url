@@ -12,6 +12,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
+    "axios": "^1.12.2",
     "ws": "^8.18.3"
   }
 }
