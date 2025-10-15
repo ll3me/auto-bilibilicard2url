@@ -63,7 +63,7 @@ function connectToNapCat() {
         const shortUrl = removeUrlParams(rawUrl);
         console.log(`[群: ${message.group_id}] 检测到B站小程序, 提取到短链接: ${shortUrl}`);
 
-        let finalMessage = config.bilibili.replyPrefix + '\n' + shortUrl;
+        let finalMessage = config.bilibili.replyPrefix + shortUrl;
 
         // [核心功能] 检查BV模式是否开启
         if (config.bilibili.enableBVMode) {
