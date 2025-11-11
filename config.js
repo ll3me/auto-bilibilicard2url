@@ -14,15 +14,16 @@ module.exports = {
 
   // Bilibili 相关功能配置
   bilibili: {
+    enableShareTextParser: true,
     // 是否开启BV模式。
     // true: 会访问短链接获取BV号，并附加到回复末尾。示例: "...b23.tv/xxxxx [BV: BV1xx4xx1xx]"
     // false: 仅回复清理后的 b23.tv 短链接。
     enableBVMode: true,
-
+    textShareReplyMode: 'bv_only',
     // 回复消息的前缀
-    replyPrefix: '链接： ',
+    replyPrefix: '链接：',
 
     // BV号附加格式, {bv} 会被替换为实际的BV号
-    bvAppendFormat: ' [BV: {bv}]'
+    bvAppendFormat: '\n视频BV号：{bv}'
   }
 };
